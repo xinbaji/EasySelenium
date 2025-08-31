@@ -2,3 +2,5 @@ env/
 .venv/
 log/
 .idea/
+test.py
+/screenshots/

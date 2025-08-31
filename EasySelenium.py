@@ -1,12 +1,14 @@
 import logging
 import os
-from time import strftime,localtime
-
+from time import strftime,localtime,sleep
+from datetime import datetime
+from selenium.common import ScreenshotException
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver import Edge
 from selenium.webdriver.common.by import By
 from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -20,8 +22,8 @@ class BaseEasySeleniumException(Exception):
 class NoSuchDriverException(BaseEasySeleniumException):...
 class PathInvalid(BaseEasySeleniumException):...
 class NoSuchCaseException(BaseEasySeleniumException):...
-class NoSuchElement(BaseEasySeleniumException):...
-
+class NoSuchElementException(BaseEasySeleniumException):...
+class ScreenshotException(BaseEasySeleniumException):...
 class Log:
     def __init__(self, log_name, mode: str = "i") -> None:
         log_level = logging.DEBUG if mode == "d" else logging.INFO
@@ -53,7 +55,7 @@ def only_chained_calls(func):
             self.temp_locator = None
             return result
         else:
-            raise NoSuchElement("被处理的元素不存在")
+            raise NoSuchElementException("被处理的元素不存在")
 
     return wrapper
 
@@ -61,7 +63,7 @@ class Driver:
 
     def __init__(self) -> None:
 
-        self.log = Log("EasySelenium", "d").logger
+        self.log = Log("EasySelenium", "i").logger
 
         if self._driver_isavailable(target_driver=Chrome):
             __driver = Chrome
@@ -72,15 +74,14 @@ class Driver:
             options = EdgeOptions()
             self.log.debug("edge")
         else:
-            self.log.error("无支持的浏览器，安装edge或chrome。")
             raise NoSuchDriverException("无支持的浏览器，安装edge或chrome。")
 
         self.download_location = os.path.join(os.getcwd(), "temp")
         self.prefs = {"download.default_directory": os.path.join(os.getcwd(), "temp")}
         self.userdata_dir = os.path.join(os.getcwd(), "env")
         self.timeout_seconds = 12
-        self.temp_element = None
-        self.temp_locator = None
+        self.temp_element:WebElement = None
+        self.temp_locator:tuple = None
 
         options.add_experimental_option("prefs", self.prefs)
         options.add_experimental_option("detach", True)
@@ -90,8 +91,8 @@ class Driver:
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_argument("log-level=3")
         self.driver = __driver(options=options)
-        self.driver.set_page_load_timeout(10)
-
+        self.driver.maximize_window()
+        self.driver.set_page_load_timeout(self.timeout_seconds)
     def _driver_isavailable(self, target_driver) -> bool:
         try:
             __driver = target_driver()
@@ -112,7 +113,7 @@ class Driver:
             "iframe_available": EC.frame_to_be_available_and_switch_to_it,
             "string_visible": EC.text_to_be_present_in_element,
         }
-        if timeout == -1:
+        if timeout < 0:
             timeout = self.timeout_seconds
         if path[0] == "#":
             locator = (By.CSS_SELECTOR, path)
@@ -170,6 +171,21 @@ class Driver:
     def force_click(self):
         self.driver.execute_script("arguments[0].click()", self.temp_element)
 
+    @only_chained_calls
+    def clear(self):
+        self.temp_element.clear()
+
+    def screenshot(self):
+        if not os.path.exists("screenshots"):
+            os.makedirs("screenshots",exist_ok=True)
+        filename=datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")[:-4]+".png"
+        filepath=os.path.join(os.getcwd(),"screenshots",filename).replace("\\","/")
+        self.log.debug("element: "+str(self.temp_element))
+        self.log.debug("save_path: "+filepath)
+        result=self.temp_element.screenshot(filepath)
+        if not result:
+            raise ScreenshotException("截图写入文件失败，请检查该工作目录的读写权限")
+
     def switch_to_last_window(self):
         self.driver.switch_to.window(self.driver.window_handles[-1])
 
@@ -188,5 +204,8 @@ class Driver:
         except Exception as e:
             self.log.error("错误：" + str(e))
 
-
+if __name__ == "__main__":
+    driver=Driver()
+    driver.get("http://www.baidu.com")
+    driver.wait("visible",'//*[@id="s-hotsearch-wrapper"]')
 

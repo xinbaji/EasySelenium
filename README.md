@@ -226,7 +226,7 @@ from EasySelenium import Driver
 driver = Driver()
 driver.get("https://example.com")
 driver.wait("visible", "#some-element").click()
-driver.send_keys("Hello, World!")
+driver.wait("visible", "#some-element").send_keys("Hello, World!")
 driver.close()
 ```
 

@@ -48,11 +48,10 @@ EasySelenium 是一个基于 Selenium 的 Python 封装库，提供了简洁的 
 
 **功能**：检查指定的浏览器驱动是否可用。
 
-**参数**：
-- `target_driver`: 目标浏览器驱动类（如 `Chrome` 或 `Edge`）。
+。
 
 **返回值**：
-- `bool`: 驱动是否可用。
+- `str`: 返回一个可用驱动字符串。
 
 ---
 

@@ -64,20 +64,32 @@ class Driver:
     def __init__(self) -> None:
 
         self.log = Log("EasySelenium", "i").logger
+        if os.path.exists("env/browser.txt"):
+            with open("env/browser.txt", "r") as f:
+                driver_str=f.read()
+                if driver_str not in ["chrome","edge"]:
+                    driver_str = self._driver_isavailable()
+        else:
+            driver_str=self._driver_isavailable()
 
-        if self._driver_isavailable(target_driver=Chrome):
+        if "chrome" in driver_str:
             __driver = Chrome
             options = ChromeOptions()
-            self.log.debug("chrome")
-        elif self._driver_isavailable(target_driver=Edge):
+            self.log.debug("当前浏览器: Chrome")
+        elif "edge" in driver_str:
             __driver = Edge
             options = EdgeOptions()
-            self.log.debug("edge")
+            self.log.debug("当前浏览器: Edge")
         else:
-            raise NoSuchDriverException("无支持的浏览器，安装edge或chrome。")
+            raise NoSuchDriverException("无支持的浏览器，安装Edge或Chrome。")
 
-        self.download_location = os.path.join(os.getcwd(), "temp")
-        self.prefs = {"download.default_directory": os.path.join(os.getcwd(), "temp")}
+
+
+
+        '''self.download_location = os.path.join(os.getcwd(), "download")
+        self.prefs = {"download.default_directory": os.path.join(os.getcwd(), "temp")}'''
+
+        self.prefs={}
         self.userdata_dir = os.path.join(os.getcwd(), "env")
         self.timeout_seconds = 12
         self.temp_element:WebElement = None
@@ -93,15 +105,24 @@ class Driver:
         self.driver = __driver(options=options)
         self.driver.maximize_window()
         self.driver.set_page_load_timeout(self.timeout_seconds)
-    def _driver_isavailable(self, target_driver) -> bool:
-        try:
-            __driver = target_driver()
-        except Exception as e:
-            self.log.error(e)
-            return False
-        else:
-            __driver.quit()
-            return True
+    def _driver_isavailable(self) -> str:
+        driver_dict={
+            "chrome":Chrome,
+            "edge":Edge
+        }
+        for driver_str,driver_class in driver_dict.items():
+            try:
+                driver =driver_class()
+            except Exception as e:
+                self.log.error(e)
+            else:
+                driver.quit()
+                with open("env/browser.txt", "w") as f:
+                    f.write(driver_str)
+                return driver_str
+
+        raise NoSuchDriverException("无支持的浏览器，安装Edge或Chrome。")
+
 
     def get(self, url):
         self.driver.get(url)
@@ -207,5 +228,5 @@ class Driver:
 if __name__ == "__main__":
     driver=Driver()
     driver.get("http://www.baidu.com")
-    driver.wait("visible",'//*[@id="s-hotsearch-wrapper"]')
+    driver.wait("visible",'//*[@id="s-hotsearch-wrapper"]').screenshot()
 

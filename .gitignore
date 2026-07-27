@@ -1,6 +1,2 @@
-env/
-.venv/
+data/
 log/
-.idea/
-test.py
-/screenshots/
